@@ -22,21 +22,6 @@ AVIP=$(grep APACHE_VLAN_IP ${CONFIG_FILE} | awk -F= '{print $2}')
 VIP=$(grep -w VLAN_IP ${CONFIG_FILE} | awk -F= '{print $2}')
 VID=$(grep -w VLAN ${CONFIG_FILE} | awk -F= '{print $2}')
 
-#echo EXT_IF=${EXT_IF}
-#echo INT_IF=${INT_IF}
-#echo MNG_IF=${MNG_IF}
-
-#echo EXT_IP=${EXT_IP}
-#echo INT_IP=${INT_IP}
-#echo EXT_GTW=${EXT_GTW}
-
-#echo EXT_IP_SINGLE=${EXT_IP_SINGLE}
-#echo NGINX_PORT=${NGINX_PORT}
-
-#echo AVIP=$AVIP
-#echo VIP=$VIP
-#echo VID=$VID
-
 #CHECK_MOD=$(lsmod | grep 8021q | wc -l)
 #if  [ "${CHECK_MOD}" -eq "0" ]; then
 #	modprobe 8021q
@@ -88,11 +73,7 @@ iptablesfunction
 
 sslfunction () {
 ### Creating Root-certificate
-openssl req -x509 -nodes -days 3650 -newkey rsa:4096 -keyout ${CUR_PWD}/rootCA.key -out ${DEST_DIR}/root-ca.crt -subj '/C=UA/ST=Kievskaya/L=Kiev/O=IT/OU=IT-Department/CN=Root-CA' -sha256
-
-### Check  md5-sum for root certificate and key
-#openssl x509 -noout -modulus -in ${DEST_DIR}/root-ca.crt | openssl md5
-#openssl rsa -noout -modulus -in  ${CUR_PWD}/rootCA.key | openssl md5
+openssl req -x509 -nodes -days 3650 -newkey rsa:4096 -keyout ${CUR_PWD}/rootCA.key -out ${DEST_DIR}/root-ca.crt -subj '/C=UA/ST=Kievskaya/L=Kiev/O=IT/OU=IT-Department/CN=Root-CA' -sha256 > /dev/null 
 
 ### Create CSR for web-site
 cat > ${CUR_PWD}/openssl.cnf << EOF
@@ -122,28 +103,17 @@ DNS.1 = vm1
 IP.1 = ${EXT_IP_SINGLE}
 EOF
 
-### Create Private key and CSR for one command
-#openssl req -new -sha256 -nodes -out ${CUR_PWD}/web.csr -newkey rsa:2048 -keyout ${CUR_PWD}/web.key -config <( cat  ${CUR_PWD}/openssl.cnf )
-
 ### Create Private key for web-site
-openssl genrsa -out ${CUR_PWD}/web.key 2048
+openssl genrsa -out ${CUR_PWD}/web.key 2048 > /dev/null
 
 ### Create CSR for web-site
-openssl req -new -key ${CUR_PWD}/web.key -out ${CUR_PWD}/web.csr -config ${CUR_PWD}/openssl.cnf
-
-### Read CSR
-#openssl req -text -noout -in ${CUR_PWD}/web.csr
+openssl req -new -key ${CUR_PWD}/web.key -out ${CUR_PWD}/web.csr -config ${CUR_PWD}/openssl.cnf >/dev/null
 
 ### Create and sign web-certificate by rootCA
-openssl x509 -req -days 730 -in ${CUR_PWD}/web.csr -CA ${DEST_DIR}/root-ca.crt -CAkey ${CUR_PWD}/rootCA.key -CAcreateserial -out ${DEST_DIR}/web.crt -extfile ${CUR_PWD}/openssl.cnf -extensions v3_req
-
-### Check  md5-sum for web certificate, key, csr
-#openssl x509 -noout -modulus -in ${DEST_DIR}/web.crt | openssl md5
-#openssl rsa -noout -modulus -in ${CUR_PWD}/web.key | openssl md5
-#openssl req -noout -modulus -in ${CUR_PWD}/web.csr | openssl md5
+openssl x509 -req -days 730 -in ${CUR_PWD}/web.csr -CA ${DEST_DIR}/root-ca.crt -CAkey ${CUR_PWD}/rootCA.key -CAcreateserial -out ${DEST_DIR}/web.crt -extfile ${CUR_PWD}/openssl.cnf -extensions v3_req > /dev/null
 
 }
-#sslfunction
+sslfunction
 
 ### Configure Nginx
 
