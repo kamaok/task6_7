@@ -11,16 +11,16 @@ INT_IF=$(grep INTERNAL_IF ${CONFIG_FILE} | awk -F= '{print $2}' | sed 's/"//g')
 MNG_IF=$(grep MANAGEMENT_IF ${CONFIG_FILE} | awk -F= '{print $2}' | sed 's/"//g')
 
 EXT_IP=$(grep EXT_IP ${CONFIG_FILE} | awk -F= '{print $2}' | sed 's/"//g')
+
 INT_IP=$(grep INT_IP ${CONFIG_FILE} | awk -F= '{print $2}')
 EXT_GTW=$(grep EXT_GW ${CONFIG_FILE} | awk -F= '{print $2}')
-
-EXT_IP_SINGLE=$(echo ${EXT_IP} | awk -F/ '{print $1}')
 
 NGINX_PORT=$(grep NGINX_PORT ${CONFIG_FILE} | awk -F= '{print $2}')
 
 AVIP=$(grep APACHE_VLAN_IP ${CONFIG_FILE} | awk -F= '{print $2}')
 VIP=$(grep -w VLAN_IP ${CONFIG_FILE} | awk -F= '{print $2}')
 VID=$(grep -w VLAN ${CONFIG_FILE} | awk -F= '{print $2}')
+
 
 #CHECK_MOD=$(lsmod | grep 8021q | wc -l)
 #if  [ "${CHECK_MOD}" -eq "0" ]; then
@@ -30,18 +30,29 @@ VID=$(grep -w VLAN ${CONFIG_FILE} | awk -F= '{print $2}')
 ### Enable 8021q module whether itisn't already enable
 lsmod | grep 8021q > /dev/null || modprobe 8021q
 
-externalipfunction () {
+externalipstaticfunction () {
+EXT_IP_SINGLE=$(echo ${EXT_IP} | awk -F/ '{print $1}')
+
 ip link set dev ${EXT_IF} down
 ip addr add ${EXT_IP} dev ${EXT_IF}
 ip link set dev ${EXT_IF} up
+
+### Set up DNS-server
+echo "nameserver 8.8.8.8" > /etc/resolv.conf
 
 ### Set up default route
 ip route del default > /dev/null 2>&1 ; ip route add default via ${EXT_GTW}
 ##ip route change default via ${EXT_GTW}
 }
 
+externalipdynamicfunction () {
+dhclient ${EXT_IF}
+EXT_IP=$(ip -o -4 a l | grep ${EXT_IF} | awk '{print $4}')
+EXT_IP_SINGLE=$(echo ${EXT_IP} | awk -F/ '{print $1}')
+}
+
 ### Configure External interface
-if [ "${EXT_IP}" == "DHCP" ]; then true; else externalipfunction; fi
+if [ "${EXT_IP}" == "DHCP" ]; then externalipdynamicfunction; else externalipstaticfunction; fi
 
 ### Configure Internal interface
 ip link set dev ${INT_IF} down
@@ -49,7 +60,7 @@ ip addr add ${INT_IP} dev ${INT_IF}
 ip link set dev ${INT_IF} up
 
 ### Configure Managment interface
-#ip link set dev ${MNG_IF} down
+#ip link set dev ${MNG_IF} up
 
 ### Confugire VLAN
 ip link add link ${INT_IF} name ${INT_IF}.${VID} type vlan id ${VID}

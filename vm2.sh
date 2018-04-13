@@ -2,26 +2,16 @@
 
 CUR_PWD=$(dirname $0)
 CONFIG_FILE="${CUR_PWD}/vm2.config"
-CONFIG_FILE_VM1="${CUR_PWD}/vm1.config"
 
 INT_IF=$(grep INTERNAL_IF ${CONFIG_FILE} | awk -F= '{print $2}' | sed 's/"//g')
 MNG_IF=$(grep MANAGEMENT_IF ${CONFIG_FILE} | awk -F= '{print $2}' | sed 's/"//g')
-INT_IP=$(grep INTERNAL_IP ${CONFIG_FILE} | awk -F= '{print $2}')
+INT_IP=$(grep INT_IP ${CONFIG_FILE} | awk -F= '{print $2}')
 GW_IP=$(grep GW_IP ${CONFIG_FILE} | awk -F= '{print $2}')
 
 AVIP=$(grep APACHE_VLAN_IP ${CONFIG_FILE} | awk -F= '{print $2}')
 AIP=$(echo $AVIP | awk -F/ '{print $1}')
 VID=$(grep -w VLAN ${CONFIG_FILE} | awk -F= '{print $2}')
 
-
-#echo INT_IF=${INT_IF}
-#echo MNG_IF=${MNG_IF}
-#echo INT_IP=${INT_IP}
-#echo GW_IP=${GW_IP}
-
-#echo AVIP=${AVIP}
-#echo AIP=${AIP}
-#echo VID=${VID}
 
 #CHECK_MOD=$(lsmod | grep 8021q | wc -l)
 #if  [ "${CHECK_MOD}" -eq "0" ]; then
@@ -41,16 +31,17 @@ ip addr add $AVIP dev ${INT_IF}.${VID}
 ip link set dev ${INT_IF}.${VID} up
 
 ### Configure managment interface
-#ip link set dev ${MNG_IF} down
+#ip link set dev ${MNG_IF} up
 
 ### Configure default route
 ip route del default > /dev/null; ip route add default via ${GW_IP}
 
+## Set up DNS-server
+echo "nameserver 8.8.8.8" > /etc/resolv.conf
 
 apt-get update > /dev/null && apt-get install apache2 -y > /dev/null
 
 ### Apache configuration
-#sed -i "s/Listen 80/Listen $AIP:80/" /etc/apache2/ports.conf
 rm -rf /etc/apache2/ports.conf
 cat << EOF > /etc/apache2/ports.conf
 Listen $AIP:80
