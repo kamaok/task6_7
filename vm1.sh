@@ -76,7 +76,7 @@ iptablesfunction () {
 iptables -F
 iptables -F -t nat
 iptables -F -t mangle
-iptables -t nat -A POSTROUTING -s ${INT_IP} -j MASQUERADE
+iptables -t nat -A POSTROUTING -s ${INT_IP} ! -d ${INT_IP} -j MASQUERADE
 }
 iptablesfunction
 
